@@ -2,11 +2,13 @@
 """Interactive terminal client for minutecryptic.com's daily puzzle."""
 
 import argparse
+import datetime
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 try:
     from rich.console import Console
@@ -21,6 +23,8 @@ except ImportError:
 API_BASE = "https://www.minutecryptic.com/api/daily_puzzle"
 USER_AGENT = "Mozilla/5.0 (minute-cryptic-cli)"
 HINT_STYLES = {"indicators": "magenta", "fodder": "yellow", "definition": "blue"}
+REPO_ROOT = Path(__file__).resolve().parent.parent
+HISTORY_DIR = REPO_ROOT / "history"
 
 console = Console()
 
@@ -127,6 +131,20 @@ class PuzzleSession:
             return True
         self.wrong_guesses += 1
         return False
+
+
+def save_history(session):
+    HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    record = dict(session.puzzle)
+    record["stats"] = {
+        "wrongGuesses": session.wrong_guesses,
+        "hintsUsed": [session.hints[i]["type"] for i in sorted(session.revealed_hints)],
+        "lettersRevealedAtSolve": session.letters_revealed_at_solve,
+        "solvedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    path = HISTORY_DIR / f"{session.puzzle['date']}.json"
+    path.write_text(json.dumps(record, indent=2) + "\n")
+    return path
 
 
 def par_text(puzzle):
@@ -248,6 +266,7 @@ def handle_command(session, cmd, arg):
 
 def handle_guess(session, word):
     if session.guess(word):
+        history_path = save_history(session)
         console.print()
         body = Text(justify="center")
         body.append(f"Correct! {session.answer}", style="bold green")
@@ -261,6 +280,7 @@ def handle_guess(session, word):
         body.append("\n")
         body.append_text(par_text(session.puzzle))
         console.print(Panel(body, border_style="green"))
+        console.print(Text(f"Saved to {history_path.relative_to(REPO_ROOT)}", style="dim"), justify="center")
         console.print()
     else:
         console.print(Text("Not quite — try again.", style="red"))

@@ -5,25 +5,36 @@ Play [minutecryptic.com](https://www.minutecryptic.com/)'s daily cryptic clue in
 Uses the site's public JSON API (`/api/daily_puzzle/today`, `/api/daily_puzzle/id/<id>`,
 `/api/daily_puzzle/par/<date>`) — no API key or login needed.
 
-## Setup
+## Install
 
-Requires the [`rich`](https://github.com/Textualize/rich) package for the terminal UI:
+Clone the repo and install the one dependency ([`rich`](https://github.com/Textualize/rich),
+used for the terminal UI):
 
 ```
+git clone <this-repo-url>
+cd minute_cryptic_cli
 pip3 install -r requirements.txt
 ```
 
-A `mc` alias was added to `~/.zshrc`, pointing at `minute_cryptic.py` in this directory.
-Open a new terminal (or `source ~/.zshrc`) and run:
+Make the script executable and put it on your `PATH`, or add an alias. For zsh, add this
+line to your `~/.zshrc` (adjust the path to wherever you cloned the repo):
 
 ```
+alias mc="/path/to/minute_cryptic_cli/scripts/minute_cryptic.py"
+```
+
+Then reload your shell config and run it:
+
+```
+source ~/.zshrc
 mc
 ```
 
 ## Usage
 
-Once running, you get today's clue and a blank-letter grid in a box that fills your
-terminal width. Type a word directly to guess it — everything else needs a leading `/`:
+Running `mc` fetches today's puzzle and shows the clue and a blank-letter grid in a box
+that fills your terminal width. Type a word directly to guess it — everything else needs
+a leading `/`:
 
 ```
 mc> great apes         # guesses are typed directly, no command needed
@@ -42,3 +53,17 @@ mc --id <puzzle-id>
 ```
 
 There's no date-indexed archive endpoint in the API — only `today` and `id/<id>` lookups.
+
+## History
+
+Every puzzle you solve is saved as JSON to `history/<date>.json` in this repo — the full
+puzzle (clue, answer, hints, par) plus your stats for that solve (wrong guesses, which
+hint types you used, how many letters you revealed, and the solve timestamp).
+
+## Project layout
+
+```
+scripts/minute_cryptic.py   the CLI itself
+history/                    one JSON file per solved puzzle, named by date
+requirements.txt            Python dependencies (rich)
+```
