@@ -50,12 +50,23 @@ falling back to `"UTC"` — no third-party tz library needed for that.
 
 ## History feature
 
-On a successful guess, `save_history()` writes the full puzzle dict plus a `stats` block
-(`wrongGuesses`, `hintsUsed`, `lettersRevealedAtSolve`, `solvedAt`) to
-`history/<puzzle-date>.json` at the repo root. Only fires on solve, not on `/answer`
-give-up. `HISTORY_DIR` is computed as `Path(__file__).resolve().parent.parent / "history"`
-— this assumes the script stays exactly one directory below the repo root (currently
-`scripts/`). If you move the script again, update that path.
+`record_and_save()` fires on **both** a successful guess and a confirmed `/answer`
+give-up (via `handle_guess()` and the `/answer` branch of `handle_command()`
+respectively). It prompts for a difficulty score and a puzzle rating (both 1-5, via
+`prompt_rating()`, re-prompting on invalid input; `Ctrl-D`/`Ctrl-C` during the prompt
+returns `None` rather than crashing) and then calls `save_history()`, which writes the
+full puzzle dict plus a `stats` block to `isaac_history/<puzzle-date>.json` at the repo root:
+`outcome` (`"solved"` or `"gaveUp"`), `wrongGuesses`, `hintsUsed`, `lettersRevealed`,
+`difficulty`, `rating`, `recordedAt`.
+
+`lettersRevealed` uses `PuzzleSession.letters_revealed_count`, a property that returns
+`letters_revealed_at_solve` when solved (see the bug note below for why) or plain
+`len(self.revealed)` when given up (safe in that case — give-up never overwrites
+`self.revealed`).
+
+`HISTORY_DIR` is computed as `Path(__file__).resolve().parent.parent / "isaac_history"` — this
+assumes the script stays exactly one directory below the repo root (currently `scripts/`).
+If you move the script again, update that path.
 
 ## A bug worth knowing about (already fixed, don't reintroduce)
 

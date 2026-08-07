@@ -24,7 +24,7 @@ API_BASE = "https://www.minutecryptic.com/api/daily_puzzle"
 USER_AGENT = "Mozilla/5.0 (minute-cryptic-cli)"
 HINT_STYLES = {"indicators": "magenta", "fodder": "yellow", "definition": "blue"}
 REPO_ROOT = Path(__file__).resolve().parent.parent
-HISTORY_DIR = REPO_ROOT / "history"
+HISTORY_DIR = REPO_ROOT / "isaac_history"
 
 console = Console()
 
@@ -132,15 +132,34 @@ class PuzzleSession:
         self.wrong_guesses += 1
         return False
 
+    @property
+    def letters_revealed_count(self):
+        return self.letters_revealed_at_solve if self.solved else len(self.revealed)
 
-def save_history(session):
+
+def prompt_rating(label):
+    while True:
+        try:
+            raw = console.input(f"[bold cyan]{label} (1-5): [/bold cyan]").strip()
+        except (EOFError, KeyboardInterrupt):
+            console.print()
+            return None
+        if raw.isdigit() and 1 <= int(raw) <= 5:
+            return int(raw)
+        console.print(Text("Enter a number from 1 to 5.", style="red"))
+
+
+def save_history(session, difficulty=None, rating=None):
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
     record = dict(session.puzzle)
     record["stats"] = {
+        "outcome": "solved" if session.solved else "gaveUp",
         "wrongGuesses": session.wrong_guesses,
         "hintsUsed": [session.hints[i]["type"] for i in sorted(session.revealed_hints)],
-        "lettersRevealedAtSolve": session.letters_revealed_at_solve,
-        "solvedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
+        "lettersRevealed": session.letters_revealed_count,
+        "difficulty": difficulty,
+        "rating": rating,
+        "recordedAt": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
     }
     path = HISTORY_DIR / f"{session.puzzle['date']}.json"
     path.write_text(json.dumps(record, indent=2) + "\n")
@@ -258,6 +277,8 @@ def handle_command(session, cmd, arg):
         if confirm == "y":
             session.gave_up = True
             console.print(Text.from_markup(f"The answer was [bold green]{session.answer}[/]."))
+            console.print()
+            record_and_save(session)
     else:
         console.print(Text(f"Unknown command '/{cmd}'.", style="red"))
         print_help()
@@ -266,7 +287,6 @@ def handle_command(session, cmd, arg):
 
 def handle_guess(session, word):
     if session.guess(word):
-        history_path = save_history(session)
         console.print()
         body = Text(justify="center")
         body.append(f"Correct! {session.answer}", style="bold green")
@@ -280,10 +300,18 @@ def handle_guess(session, word):
         body.append("\n")
         body.append_text(par_text(session.puzzle))
         console.print(Panel(body, border_style="green"))
-        console.print(Text(f"Saved to {history_path.relative_to(REPO_ROOT)}", style="dim"), justify="center")
         console.print()
+        record_and_save(session)
     else:
         console.print(Text("Not quite — try again.", style="red"))
+
+
+def record_and_save(session):
+    difficulty = prompt_rating("Difficulty")
+    rating = prompt_rating("Puzzle rating")
+    history_path = save_history(session, difficulty=difficulty, rating=rating)
+    console.print(Text(f"Saved to {history_path.relative_to(REPO_ROOT)}", style="dim"), justify="center")
+    console.print()
 
 
 def run_session(session):

@@ -56,14 +56,16 @@ There's no date-indexed archive endpoint in the API — only `today` and `id/<id
 
 ## History
 
-Every puzzle you solve is saved as JSON to `history/<date>.json` in this repo — the full
-puzzle (clue, answer, hints, par) plus your stats for that solve (wrong guesses, which
-hint types you used, how many letters you revealed, and the solve timestamp).
+After you solve a puzzle (or give up with `/answer`), you're asked to rate it — a
+difficulty score and a puzzle rating, both 1-5. The result is saved as JSON to
+`isaac_history/<date>.json` in this repo: the full puzzle (clue, answer, hints, par) plus your
+stats for that attempt — outcome (solved/gave up), wrong guesses, which hint types you
+used, how many letters you revealed, your difficulty/rating scores, and a timestamp.
 
 ## Project layout
 
 ```
 scripts/minute_cryptic.py   the CLI itself
-history/                    one JSON file per solved puzzle, named by date
+isaac_history/              one JSON file per puzzle attempt, named by date
 requirements.txt            Python dependencies (rich)
 ```
