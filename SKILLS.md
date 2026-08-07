@@ -35,7 +35,8 @@ falling back to `"UTC"` — no third-party tz library needed for that.
 ## Architecture
 
 - `PuzzleSession` — holds one puzzle plus solve-in-progress state (`revealed` letter
-  indices, `revealed_hints` indices, `wrong_guesses`, `letters_revealed_at_solve`).
+  indices, `revealed_hints` indices, `wrong_guesses`, `letters_revealed_at_solve`,
+  `replay`).
 - `run_session()` — REPL loop. **Bare input is always a guess; `/`-prefixed input is a
   command** (`/hint`, `/clue`, `/letter`, `/answer`, `/quit`, `/help`). This was a
   deliberate change from an earlier `guess <word>` / `g <word>` syntax — don't reintroduce
@@ -68,6 +69,27 @@ full puzzle dict plus a `stats` block to `isaac_history/<puzzle-date>.json` at t
 assumes the script stays exactly one directory below the repo root (currently `scripts/`).
 If you move the script again, update that path.
 
+`record_and_save()` is skipped entirely when `session.replay` is `True` (see the Replay
+section below) — a dim "Replay — not saved to history." line prints instead, at both call
+sites (`handle_guess()` and the `/answer` branch).
+
+## Replay feature
+
+`mc <date>` (a positional CLI arg, `main()`) replays a puzzle you've already solved.
+`load_puzzle_for_replay(date_str)` reads `isaac_history/<date_str>.json` directly — no
+network call — strips the `stats` key, and returns the rest as the puzzle dict (the
+history record already *is* a full puzzle dict plus a `stats` key, since `save_history()`
+built it with `dict(session.puzzle)` as the base). Exits with a clear error if that date
+has no history file; there's no way to replay a date you haven't already played, since
+there's no date-indexed archive API endpoint (see above).
+
+`main()` sets `session.replay = True` when a date arg was given. `print_header()` appends
+a `[replay]` tag next to the par line when `session.replay` is set. This is the only place
+replay mode is visibly indicated pre-solve — don't forget it if you refactor the header.
+
+Don't confuse this with `--id`: `--id` hits the network (`fetch_by_id`) and still saves
+normally on solve; only the positional `date` arg is a no-network, no-save replay.
+
 ## A bug worth knowing about (already fixed, don't reintroduce)
 
 `PuzzleSession.guess()` sets `self.revealed = set(range(piece_count))` on a correct guess
@@ -83,6 +105,9 @@ The fix: snapshot the real count into `letters_revealed_at_solve` *before* overw
   as a fast syntax check after every edit.
 - Simulate the REPL with piped stdin: `printf '/hint i\nguess\n/quit\n' | python3 scripts/minute_cryptic.py`.
   Note `rich` disables color when stdout isn't a tty, so this only verifies logic/text, not styling.
+- To test replay without touching real history, solve a puzzle normally first (creates
+  `isaac_history/<date>.json`), then run `python3 scripts/minute_cryptic.py <date>` and
+  diff the history file before/after — it must be byte-for-byte unchanged.
 - To verify ANSI colors and terminal-width behavior (e.g. that panels actually expand),
   run under a pty: `COLUMNS=120 script -q /dev/null python3 scripts/minute_cryptic.py`,
   then inspect with `cat -v` or strip ANSI codes with a regex to check exact line widths.

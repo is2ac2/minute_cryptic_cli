@@ -54,9 +54,21 @@ mc --id <puzzle-id>
 
 There's no date-indexed archive endpoint in the API — only `today` and `id/<id>` lookups.
 
+## Replay
+
+```
+mc 2026-08-06
+```
+
+Replays a puzzle you've already played, loaded from your own `isaac_history/<date>.json`
+— no network call needed. A `[replay]` tag shows in the header, and solving or giving up
+does **not** prompt for a rating or touch that day's saved stats; it's just a replay. You
+can only replay dates that already have a history entry.
+
 ## History
 
-After you solve a puzzle (or give up with `/answer`), you're asked to rate it — a
+After you solve a puzzle (or give up with `/answer`), you're asked to rate it (skipped
+entirely in replay mode, see above) — a
 difficulty score and a puzzle rating, both 1-5. The result is saved as JSON to
 `isaac_history/<date>.json` in this repo: the full puzzle (clue, answer, hints, par) plus your
 stats for that attempt — outcome (solved/gave up), wrong guesses, which hint types you
