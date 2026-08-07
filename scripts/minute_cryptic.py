@@ -62,6 +62,18 @@ def fetch_by_id(puzzle_id):
     return fetch_json(f"{API_BASE}/id/{puzzle_id}")
 
 
+def load_puzzle_for_replay(date_str):
+    path = HISTORY_DIR / f"{date_str}.json"
+    if not path.exists():
+        sys.exit(
+            f"minute cryptic: no saved history for {date_str} "
+            f"({path.relative_to(REPO_ROOT)} not found) — you can only replay dates you've already played."
+        )
+    record = json.loads(path.read_text())
+    record.pop("stats", None)
+    return record
+
+
 class PuzzleSession:
     def __init__(self, puzzle):
         self.puzzle = puzzle
@@ -78,6 +90,7 @@ class PuzzleSession:
         self.solved = False
         self.gave_up = False
         self.letters_revealed_at_solve = 0
+        self.replay = False
 
     @staticmethod
     def _letter_groups(config):
@@ -184,6 +197,9 @@ def print_header(session):
     body.append(f"Minute Cryptic — {puzzle['date']}", style="bold cyan")
     body.append("  ")
     body.append(f"(par {puzzle['par']})", style="bold yellow")
+    if session.replay:
+        body.append("  ")
+        body.append("[replay]", style="bold dim")
     body.append("\n")
     if puzzle.get("setterName"):
         body.append(f"Set by {puzzle['setterName']}", style="magenta")
@@ -278,7 +294,11 @@ def handle_command(session, cmd, arg):
             session.gave_up = True
             console.print(Text.from_markup(f"The answer was [bold green]{session.answer}[/]."))
             console.print()
-            record_and_save(session)
+            if session.replay:
+                console.print(Text("Replay — not saved to history.", style="dim"))
+                console.print()
+            else:
+                record_and_save(session)
     else:
         console.print(Text(f"Unknown command '/{cmd}'.", style="red"))
         print_help()
@@ -301,7 +321,11 @@ def handle_guess(session, word):
         body.append_text(par_text(session.puzzle))
         console.print(Panel(body, border_style="green"))
         console.print()
-        record_and_save(session)
+        if session.replay:
+            console.print(Text("Replay — not saved to history.", style="dim"), justify="center")
+            console.print()
+        else:
+            record_and_save(session)
     else:
         console.print(Text("Not quite — try again.", style="red"))
 
@@ -339,11 +363,25 @@ def run_session(session):
 
 def main():
     parser = argparse.ArgumentParser(description="Play today's Minute Cryptic puzzle in your terminal.")
+    parser.add_argument(
+        "date",
+        nargs="?",
+        metavar="YYYY-MM-DD",
+        help="replay a puzzle you've already played, loaded from isaac_history/ (doesn't affect saved stats)",
+    )
     parser.add_argument("--id", metavar="PUZZLE_ID", help="load a specific puzzle by id instead of today's")
     args = parser.parse_args()
 
-    puzzle = fetch_by_id(args.id) if args.id else fetch_today()
+    replay = bool(args.date)
+    if args.date:
+        puzzle = load_puzzle_for_replay(args.date)
+    elif args.id:
+        puzzle = fetch_by_id(args.id)
+    else:
+        puzzle = fetch_today()
+
     session = PuzzleSession(puzzle)
+    session.replay = replay
     run_session(session)
 
 
