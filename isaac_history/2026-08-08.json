@@ -91,7 +91,7 @@
   ],
   "parDetails": {
     "averagePar": 1,
-    "solveCount": 64725
+    "solveCount": 67713
   },
   "stats": {
     "outcome": "solved",
@@ -100,6 +100,6 @@
     "lettersRevealed": 0,
     "difficulty": 2,
     "rating": 2,
-    "recordedAt": "2026-08-08T19:41:47-04:00"
+    "recordedAt": "2026-08-08T23:03:31-04:00"
   }
 }
